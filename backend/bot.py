@@ -15,31 +15,21 @@ class CatBot:
 
     def create_assistant(self):
         return self.client.beta.assistants.create(
-            instructions="You are a sentiment analysis bot. Determine if the user wants to see a cat image based on their input.",
+            instructions="You are a chatbot that loves cats!",
             model="gpt-3.5-turbo",
-            tools=[
+            tools = [
                 {
                     "type": "function",
                     "function": {
-                        "name": "determine_cat_request",
-                        "description": "Determine if the user wants to see a cat image",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "wants_cat": {
-                                    "type": "boolean",
-                                    "description": "True if the user wants to see a cat image, False otherwise"
-                                }
-                            },
-                            "required": ["wants_cat"]
-                        }
+                        "name": "user_request_cat",
+                        "description": "Call this function if the user wants to see a cat"
                     }
                 }
             ]
         )
     
-    def determine_cat_request(self, wants_cat):
-        return wants_cat
+    def user_request_cat(self):
+        return True
 
     def analyze_intent(self, input_message):
         thread = self.client.beta.threads.create()
@@ -56,10 +46,10 @@ class CatBot:
         )
 
         # print(run.model_dump_json(indent=4))
-        
-        while run.status != 'completed':
-            time.sleep(5)
-            # print(run.status)
+        print(run.status)
+        output = False
+        while run.status != 'completed' and run.status != 'failed':
+            print(run.status)
             run = self.client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
             
             if run.status == 'requires_action':
@@ -69,10 +59,9 @@ class CatBot:
                 for action in required_actions["tool_calls"]:
                     # print(action)
                     func_name = action['function']['name']
-                    args = json.loads(action['function']['arguments'])
                     
-                    if func_name == "determine_cat_request":
-                        output = self.determine_cat_request(args['wants_cat'])
+                    if func_name == "user_request_cat":
+                        output = self.user_request_cat()
                         tool_outputs.append({
                             "tool_call_id": action['id'],
                             "output": str(output)
